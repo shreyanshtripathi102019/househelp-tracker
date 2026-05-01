@@ -4,17 +4,19 @@ import { createHouseholdAction } from "@/app/dashboard/actions";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
-function getSetupErrorMessage(errorCode) {
+function getSetupErrorMessage(errorCode, errorDetail) {
+  const detailSuffix = errorDetail ? ` Details: ${errorDetail}` : "";
+
   if (errorCode === "household") {
-    return "The household could not be created. Please try again.";
+    return `The household could not be created. Please try again.${detailSuffix}`;
   }
 
   if (errorCode === "membership") {
-    return "The owner membership could not be created. Please refresh and try again.";
+    return `The owner membership could not be created. Please refresh and try again.${detailSuffix}`;
   }
 
   if (errorCode === "workers") {
-    return "The worker records could not be created. Please try again now that the setup flow is fixed.";
+    return `The worker records could not be created. Please try again now that the setup flow is fixed.${detailSuffix}`;
   }
 
   return null;
@@ -57,7 +59,7 @@ export default async function DashboardPage({ searchParams }) {
     .maybeSingle();
 
   if (!membership) {
-    const setupError = getSetupErrorMessage(params.error);
+    const setupError = getSetupErrorMessage(params.error, params.detail);
 
     return (
       <main className="page-shell compact-shell">

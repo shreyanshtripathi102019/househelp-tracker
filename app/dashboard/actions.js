@@ -31,7 +31,7 @@ export async function createHouseholdAction(formData) {
     .single();
 
   if (householdError || !household) {
-    redirect("/dashboard?error=household");
+    redirectWithSetupError("household", householdError);
   }
 
   const { error: membershipError } = await supabase.from("household_members").insert({
@@ -42,7 +42,7 @@ export async function createHouseholdAction(formData) {
   });
 
   if (membershipError) {
-    redirect("/dashboard?error=membership");
+    redirectWithSetupError("membership", membershipError);
   }
 
   const { error: workerError } = await supabase
@@ -61,7 +61,7 @@ export async function createHouseholdAction(formData) {
     ]);
 
   if (workerError) {
-    redirect("/dashboard?error=workers");
+    redirectWithSetupError("workers", workerError);
   }
 
   revalidatePath("/dashboard");
@@ -135,4 +135,32 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 48);
+}
+
+function redirectWithSetupError(stage, error) {
+  const detail = buildErrorDetail(error);
+
+  console.error(`createHouseholdAction:${stage}`, {
+    code: error?.code || null,
+    message: error?.message || null,
+    details: error?.details || null,
+    hint: error?.hint || null,
+  });
+
+  redirect(`/dashboard?error=${stage}&detail=${encodeURIComponent(detail)}`);
+}
+
+function buildErrorDetail(error) {
+  const pieces = [
+    error?.code,
+    error?.message,
+    error?.details,
+    error?.hint,
+  ].filter(Boolean);
+
+  if (!pieces.length) {
+    return "Unknown database error";
+  }
+
+  return pieces.join(" | ").slice(0, 240);
 }
