@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request) {
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (claimsData?.claims) {
+  if (user) {
     await supabase.auth.signOut();
   }
 

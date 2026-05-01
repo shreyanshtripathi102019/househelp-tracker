@@ -21,21 +21,29 @@ export async function createHouseholdAction(formData) {
   const cleanerName = String(formData.get("cleanerName") || "").trim() || "Cleaner";
   const slug = `${slugify(householdName)}-${Date.now().toString(36)}`;
 
-  const { data: household, error: householdError } = await supabase
+  // Generate the household id client-side so we do NOT need a SELECT/RETURNING
+  // after the insert. The households SELECT RLS policy depends on the user
+  // being a member, but we have not inserted that membership row yet, so the
+  // RETURNING clause would come back empty and break the setup flow.
+  const householdId =
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : null) || generateUuidFallback();
+
+  const { error: householdError } = await supabase
     .from("households")
     .insert({
+      id: householdId,
       name: householdName,
       slug,
-    })
-    .select("id")
-    .single();
+    });
 
-  if (householdError || !household) {
+  if (householdError) {
     redirectWithSetupError("household", householdError);
   }
 
   const { error: membershipError } = await supabase.from("household_members").insert({
-    household_id: household.id,
+    household_id: householdId,
     user_id: user.id,
     role: "owner",
     invited_name: user.email,
@@ -49,12 +57,12 @@ export async function createHouseholdAction(formData) {
     .from("workers")
     .insert([
       {
-        household_id: household.id,
+        household_id: householdId,
         display_name: cookName,
         category: "cook",
       },
       {
-        household_id: household.id,
+        household_id: householdId,
         display_name: cleanerName,
         category: "cleaner",
       },
@@ -135,6 +143,15 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 48);
+}
+
+function generateUuidFallback() {
+  // RFC4122 v4 fallback for very old runtimes that lack crypto.randomUUID.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0;
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }
 
 function redirectWithSetupError(stage, error) {
