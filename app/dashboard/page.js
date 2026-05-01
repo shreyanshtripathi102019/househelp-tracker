@@ -43,9 +43,11 @@ export default async function DashboardPage({ searchParams }) {
   }
 
   const supabase = await createClient();
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  const userEmail = claimsData?.claims?.email || "";
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id;
+  const userEmail = user?.email || "";
 
   if (!userId) {
     redirect("/sign-in");
