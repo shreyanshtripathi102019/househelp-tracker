@@ -4,7 +4,25 @@ import { createHouseholdAction } from "@/app/dashboard/actions";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function DashboardPage() {
+function getSetupErrorMessage(errorCode) {
+  if (errorCode === "household") {
+    return "The household could not be created. Please try again.";
+  }
+
+  if (errorCode === "membership") {
+    return "The owner membership could not be created. Please refresh and try again.";
+  }
+
+  if (errorCode === "workers") {
+    return "The worker records could not be created. Please try again now that the setup flow is fixed.";
+  }
+
+  return null;
+}
+
+export default async function DashboardPage({ searchParams }) {
+  const params = (await searchParams) || {};
+
   if (!hasSupabaseEnv()) {
     return (
       <main className="page-shell compact-shell">
@@ -39,6 +57,8 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   if (!membership) {
+    const setupError = getSetupErrorMessage(params.error);
+
     return (
       <main className="page-shell compact-shell">
         <section className="card setup-card">
@@ -50,6 +70,8 @@ export default async function DashboardPage() {
               one cook and one cleaner.
             </p>
           </div>
+
+          {setupError ? <p className="banner-note">{setupError}</p> : null}
 
           <form action={createHouseholdAction} className="setup-form">
             <label className="field">

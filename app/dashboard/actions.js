@@ -34,6 +34,17 @@ export async function createHouseholdAction(formData) {
     redirect("/dashboard?error=household");
   }
 
+  const { error: membershipError } = await supabase.from("household_members").insert({
+    household_id: household.id,
+    user_id: user.id,
+    role: "owner",
+    invited_name: user.email,
+  });
+
+  if (membershipError) {
+    redirect("/dashboard?error=membership");
+  }
+
   const { error: workerError } = await supabase
     .from("workers")
     .insert([
@@ -47,22 +58,10 @@ export async function createHouseholdAction(formData) {
         display_name: cleanerName,
         category: "cleaner",
       },
-    ])
-    .select("id");
+    ]);
 
   if (workerError) {
     redirect("/dashboard?error=workers");
-  }
-
-  const { error: membershipError } = await supabase.from("household_members").insert({
-    household_id: household.id,
-    user_id: user.id,
-    role: "owner",
-    invited_name: user.email,
-  });
-
-  if (membershipError) {
-    redirect("/dashboard?error=membership");
   }
 
   revalidatePath("/dashboard");
