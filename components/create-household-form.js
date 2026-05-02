@@ -1,16 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createHouseholdAction } from "@/app/dashboard/actions";
 
 export default function CreateHouseholdForm({ setupError, detailNote }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     createHouseholdAction,
     null
   );
 
-  // Prefer inline action-state error over the URL-based error passed from
-  // the server component (which only appears on the first load after a redirect).
+  // Navigate to dashboard once the action reports success.
+  useEffect(() => {
+    if (state?.success) {
+      router.push("/dashboard");
+      router.refresh();
+    }
+  }, [state, router]);
+
   const errorMessage = state?.error || setupError || null;
 
   return (
@@ -31,12 +39,16 @@ export default function CreateHouseholdForm({ setupError, detailNote }) {
           type="text"
           placeholder="Tripathi Home"
           required
-          disabled={pending}
+          disabled={pending || state?.success}
         />
       </label>
 
-      <button className="primary-button" type="submit" disabled={pending}>
-        {pending ? "Creating…" : "Create household"}
+      <button
+        className="primary-button"
+        type="submit"
+        disabled={pending || state?.success}
+      >
+        {pending || state?.success ? "Creating…" : "Create household"}
       </button>
     </form>
   );
