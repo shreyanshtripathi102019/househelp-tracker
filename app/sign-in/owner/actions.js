@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl, hasSupabaseEnv } from "@/lib/env";
 
-export async function requestMagicLinkAction(formData) {
+export async function requestOwnerMagicLinkAction(formData) {
   if (!hasSupabaseEnv()) {
-    redirect("/sign-in?error=config");
+    redirect("/sign-in/owner?error=config");
   }
 
   const email = String(formData.get("email") || "")
@@ -14,7 +14,7 @@ export async function requestMagicLinkAction(formData) {
     .toLowerCase();
 
   if (!email) {
-    redirect("/sign-in?error=email");
+    redirect("/sign-in/owner?error=email");
   }
 
   const supabase = await createClient();
@@ -28,8 +28,8 @@ export async function requestMagicLinkAction(formData) {
   });
 
   if (error) {
-    redirect("/sign-in?error=auth");
+    redirect("/sign-in/owner?error=auth");
   }
 
-  redirect("/sign-in?sent=1");
+  redirect("/sign-in/owner?sent=1");
 }

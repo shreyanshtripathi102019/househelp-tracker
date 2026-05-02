@@ -1,116 +1,116 @@
 # Arit Househelp Portal
 
-This project has been converted from a browser-only prototype into a `Next.js + Supabase` app structure that is ready for:
-
-- frontend deployment on Vercel
-- authentication with Supabase
-- multi-household data in Postgres
-- row-level security for owners and workers
+A simple attendance + leaves portal for households and the staff who work in
+them. Owners sign in with email; staff sign in with a 6-letter code and a
+6-digit PIN that the owner shares with them on WhatsApp. No SMS provider, no
+email setup for staff.
 
 ## Stack
 
-- Next.js App Router
-- Supabase Auth with SSR helpers
-- Supabase Postgres
-- Next.js `proxy.js` session refresh pattern
+- Next.js 16 (App Router) deployed on Vercel
+- Supabase Auth (email magic link for owners, synthetic email + PIN for staff)
+- Supabase Postgres with row-level security
+- `proxy.js` for session refresh (Next.js 16 renamed middleware → proxy)
+
+## Roles
+
+- **Owner** — runs the household. Adds staff, marks attendance, sees leaves.
+- **Staff** — works in one or more households. Marks own attendance, applies
+  leaves. Each leave is auto-approved (the owner is trusted to override later
+  if needed).
 
 ## Local setup
 
-1. Install Node.js 20 or later.
-2. Copy `.env.example` to `.env.local`.
-3. Fill in:
+1. Install Node.js 20+.
+2. `cp .env.example .env.local` and fill it in:
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+```
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=eyJ...   # server-only, never to the browser
 ```
 
-4. In Supabase SQL Editor, run:
+3. In the Supabase SQL editor, run the **latest** migration only (it wipes
+   the v1 tables before recreating):
 
-```sql
-supabase/migrations/20260429_init_househelp_portal.sql
+```
+supabase/migrations/20260501_rebuild_portal.sql
 ```
 
-5. Install dependencies and run the app:
+4. In Supabase → Auth → URL Configuration, allow these redirects:
 
-```bash
+- `http://localhost:3000/auth/confirm`
+- `https://<your-vercel-domain>/auth/confirm`
+- (later) `https://<your-arit-subdomain>/auth/confirm`
+
+5. Run it:
+
+```
 npm install
 npm run dev
 ```
 
 6. Open `http://localhost:3000`.
 
-## GitHub setup
+## Deploying to Vercel
 
-This local folder can be pushed directly to:
+1. Push to GitHub (`origin/main`). Vercel auto-deploys.
+2. In the Vercel project, set the same four env vars as `.env.local`. Make
+   sure `SUPABASE_SERVICE_ROLE_KEY` is **not** prefixed with `NEXT_PUBLIC_`.
+3. Set `NEXT_PUBLIC_SITE_URL` to the production URL (custom domain when you
+   attach one, otherwise the canonical `*.vercel.app`).
+4. Add the production URL to Supabase redirect URLs.
 
-- `https://github.com/shreyanshtripathi102019/househelp-tracker`
+## Productizing under arit.co.in
 
-Suggested first push flow:
+When ready to move off `*.vercel.app`:
 
-```bash
-git init
-git branch -M main
-git remote add origin https://github.com/shreyanshtripathi102019/househelp-tracker.git
-git add .
-git commit -m "Initial househelp tracker app"
-git push -u origin main
-```
+- Easiest: subdomain. Point `househelp.arit.co.in` (CNAME) at this Vercel
+  project, set the custom domain in Vercel, update `NEXT_PUBLIC_SITE_URL` and
+  the Supabase redirect URL. Cookies stay scoped to that subdomain so each
+  arit sub-product (payroll, etc.) gets its own auth.
 
-## Supabase setup
+## Routes
 
-1. Create a new Supabase project.
-2. Run the SQL in:
+- `/` — landing, two tiles (homeowner / househelp)
+- `/sign-in` — chooser
+- `/sign-in/owner` — email magic link
+- `/sign-in/staff` — code + PIN
+- `/dashboard` — owner: roster, calendar, add-staff form, leave feed
+- `/staff/dashboard` — staff: today, big mark buttons, apply leave, history
+- `/auth/confirm` — magic link callback
+- `/auth/signout` — POST signs out and redirects to `/sign-in`
 
-```sql
-supabase/migrations/20260429_init_househelp_portal.sql
-```
+## Database
 
-3. In Supabase Auth settings, set:
+| table              | what it stores                                      |
+| ------------------ | --------------------------------------------------- |
+| households         | one per home, owned by a Supabase auth user         |
+| staff_profiles     | the human (full_name, phone, staff_code, auth user) |
+| staff_assignments  | many-to-many link between staff and households      |
+| attendance_records | one row per (assignment, date)                      |
+| leave_requests     | one row per leave request (kept as history)         |
 
-- Site URL: `http://localhost:3000` for local work
-- Redirect URLs:
-  - `http://localhost:3000/auth/confirm`
-  - your future Vercel production URL + `/auth/confirm`
-  - your future custom domain URL + `/auth/confirm`
+Row-level security enforces:
 
-4. Copy the project values into `.env.local`.
+- owners see / write only their own households and the staff assigned to them
+- staff see / write only their own assignments, attendance, leaves
+- the service-role key is used server-side to provision new staff auth users
 
-## Vercel setup
+## How staff sign-in works (no SMS, no email)
 
-1. Import the GitHub repo into Vercel.
-2. Framework preset: `Next.js`
-3. Add environment variables:
+When the owner adds a new staff:
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
-NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.vercel.app
-```
+1. We generate a random 6-letter `staff_code` (e.g. `KQ3MWX`) and a random
+   6-digit `pin`.
+2. We create a Supabase auth user with email `<staff_code>@staff.arit.local`
+   and password `<pin>` (using the service-role client).
+3. The plaintext PIN is shown to the owner **once** in a banner — they copy
+   the WhatsApp message and send it to the staff. We never store the PIN.
+4. Staff opens `/sign-in/staff`, types the code + PIN, and we sign them in
+   with `signInWithPassword({ email: <code>@staff.arit.local, password })`.
 
-4. Deploy.
-5. After deployment, add the production Vercel URL into Supabase redirect URLs.
-6. Later, when you attach `arit.co.in` or a product path, update `NEXT_PUBLIC_SITE_URL` and Supabase redirect URLs again.
-
-## Current product flow
-
-- `/` gives the product overview
-- `/sign-in` sends a magic link email
-- `/dashboard` is the protected household attendance workspace
-- first signed-in user creates the initial household and the default `Cook` and `Cleaner`
-
-## Current database model
-
-- `households`
-- `workers`
-- `household_members`
-- `attendance_records`
-
-## Notes
-
-- The app is deployed later on your own domain, but the code is already structured for Vercel.
-- Email magic links are the fastest first auth path. Later, worker access can move to phone OTP.
-- If you want to mount this later under `arit.co.in/products/...`, we can either:
-  - merge it into the main Next.js app, or
-  - keep it separate and route by path using Vercel rewrites.
+If the staff forgets the PIN, the owner clicks "Reset PIN" on the staff card.
+The same staff_code stays valid; only the PIN rotates. Staff who work in
+multiple households share one staff_code (and one PIN) across all of them.

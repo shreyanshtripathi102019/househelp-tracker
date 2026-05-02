@@ -1,74 +1,31 @@
 import Link from "next/link";
 
-const featureCards = [
-  {
-    title: "Shared attendance",
-    description:
-      "Owners can mark attendance quickly, and each worker can check only the days meant for them.",
-  },
-  {
-    title: "Built for mobile",
-    description:
-      "Large controls, clean monthly history, and a layout that feels simple on everyday phones.",
-  },
-  {
-    title: "Ready for Vercel and Supabase",
-    description:
-      "This version is structured for deployment, auth, row-level security, and multi-household growth.",
-  },
-];
-
 export default function HomePage() {
   return (
-    <main className="page-shell">
-      <div className="ambient ambient-one"></div>
-      <div className="ambient ambient-two"></div>
+    <main className="page-shell narrow-shell">
+      <section className="card landing-card">
+        <p className="eyebrow">Househelp Portal</p>
+        <h1 className="landing-heading">
+          A simple way to track househelp attendance.
+        </h1>
+        <p className="landing-sub">
+          Owners mark days, share a PIN with their helpers, and everyone sees
+          the same calendar.
+        </p>
 
-      <section className="hero card">
-        <div className="hero-copy">
-          <p className="eyebrow">Arit Product Track</p>
-          <h1>Househelp attendance that feels easy for both families and staff.</h1>
-          <p className="hero-text">
-            This app now follows a proper Vercel + Supabase route, so we can grow
-            it from a personal utility into a shared product.
-          </p>
-
-          <div className="hero-actions">
-            <Link className="primary-button" href="/sign-in">
-              Continue with email
-            </Link>
-            <Link className="secondary-button" href="/dashboard">
-              Open dashboard
-            </Link>
-          </div>
+        <div className="landing-actions">
+          <Link className="primary-button" href="/sign-in/owner">
+            I&apos;m a homeowner
+          </Link>
+          <Link className="secondary-button" href="/sign-in/staff">
+            I&apos;m a househelp
+          </Link>
         </div>
 
-        <div className="hero-panel">
-          <div className="hero-note">
-            <p>
-              First step: deploy this as its own app. Later, we can mount it under
-              `arit.co.in/products/...` or a subdomain without changing the core
-              data model.
-            </p>
-          </div>
-
-          <div className="hero-stack">
-            <div className="stack-chip">Next.js App Router</div>
-            <div className="stack-chip">Vercel Deployment</div>
-            <div className="stack-chip">Supabase Auth + DB</div>
-            <div className="stack-chip">Row-Level Security</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="feature-section">
-        {featureCards.map((feature) => (
-          <article key={feature.title} className="card feature-card">
-            <p className="section-kicker">Feature</p>
-            <h2>{feature.title}</h2>
-            <p>{feature.description}</p>
-          </article>
-        ))}
+        <p className="landing-foot">
+          Staff don&apos;t need an email. The owner shares a 6-digit PIN they
+          can type with their phone number.
+        </p>
       </section>
     </main>
   );

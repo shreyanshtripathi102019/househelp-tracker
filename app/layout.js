@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Arit Househelp Portal",
+  title: "Househelp Attendance — Arit",
   description:
-    "A Vercel and Supabase ready attendance portal for household staff.",
+    "Owners track househelp attendance and approve leaves. Staff sign in with a short code and PIN, no email needed.",
 };
 
 export default function RootLayout({ children }) {
