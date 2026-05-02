@@ -16,6 +16,7 @@ const BANNERS = {
   mail: "Account created but we could not send the email. Check SMTP settings.",
   // success
   verify: "Account created! Check your inbox for a verification link.",
+  passset: "Password updated — you can now sign in with your email and password.",
 };
 
 export default async function OwnerSignInPage({ searchParams }) {
@@ -26,7 +27,7 @@ export default async function OwnerSignInPage({ searchParams }) {
 
   const bannerKey = params.sent === "verify" ? "verify" : params.error || null;
   const banner = bannerKey ? BANNERS[bannerKey] : null;
-  const isSuccess = params.sent === "verify";
+  const isSuccess = params.sent === "verify" || params.sent === "passset";
 
   return (
     <main className="page-shell narrow-shell">

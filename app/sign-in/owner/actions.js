@@ -46,7 +46,12 @@ export async function signUpOwnerAction(formData) {
 
   const admin = createAdminClient();
 
-  // Create the user without auto-confirming so they must verify their email.
+  // Try to create a fresh user. If the auth account already exists (e.g. from
+  // a previous magic-link sign-in), update its password instead so the owner
+  // can switch to email+password without losing their account.
+  let userId;
+  let alreadyConfirmed = false;
+
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
       email,
@@ -56,11 +61,31 @@ export async function signUpOwnerAction(formData) {
 
   if (createError) {
     const msg = createError.message?.toLowerCase() || "";
-    if (msg.includes("already") || msg.includes("exists")) {
-      redirect("/sign-in/owner?mode=signup&error=exists");
+    if (!msg.includes("already") && !msg.includes("exists")) {
+      console.error("signUpOwnerAction createUser error", createError);
+      redirect("/sign-in/owner?mode=signup&error=create");
     }
-    console.error("signUpOwnerAction createUser error", createError);
-    redirect("/sign-in/owner?mode=signup&error=create");
+
+    // Account exists — look it up and update the password.
+    const { data: existing, error: lookupError } =
+      await admin.auth.admin.getUserByEmail(email);
+
+    if (lookupError || !existing?.user) {
+      redirect("/sign-in/owner?mode=signup&error=create");
+    }
+
+    userId = existing.user.id;
+    alreadyConfirmed = !!existing.user.email_confirmed_at;
+
+    await admin.auth.admin.updateUserById(userId, { password });
+  } else {
+    userId = created.user.id;
+  }
+
+  // If the email is already confirmed (they used magic links before), they can
+  // sign in immediately — no need to re-verify.
+  if (alreadyConfirmed) {
+    redirect("/sign-in/owner?sent=passset");
   }
 
   // Generate a verification link we can send ourselves.
@@ -75,8 +100,9 @@ export async function signUpOwnerAction(formData) {
 
   if (linkError || !linkData?.properties?.hashed_token) {
     console.error("signUpOwnerAction generateLink error", linkError);
-    // User was created — clean up so they can retry.
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
+    if (!alreadyConfirmed) {
+      await admin.auth.admin.deleteUser(userId).catch(() => {});
+    }
     redirect("/sign-in/owner?mode=signup&error=link");
   }
 
@@ -90,7 +116,9 @@ export async function signUpOwnerAction(formData) {
     await sendVerificationEmail(email, confirmUrl);
   } catch (mailError) {
     console.error("sendVerificationEmail error", mailError);
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
+    if (!alreadyConfirmed) {
+      await admin.auth.admin.deleteUser(userId).catch(() => {});
+    }
     redirect("/sign-in/owner?mode=signup&error=mail");
   }
 
