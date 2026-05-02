@@ -9,7 +9,10 @@ function getBanner(params) {
   if (params?.error === "config") return "Supabase env vars missing.";
   if (params?.error === "email") return "Enter an email address to continue.";
   if (params?.error === "auth") {
-    return "Could not send the email link. Check the address and try again.";
+    return "Could not generate the sign-in link. Check the address and try again.";
+  }
+  if (params?.error === "mail") {
+    return "Link generated but email delivery failed. Check SMTP_USER and SMTP_PASSWORD in your environment.";
   }
   return null;
 }

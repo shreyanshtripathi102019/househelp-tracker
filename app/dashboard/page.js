@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import OwnerWorkspace from "@/components/owner-workspace";
-import { createHouseholdAction } from "@/app/dashboard/actions";
+import CreateHouseholdForm from "@/components/create-household-form";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -74,24 +74,10 @@ export default async function DashboardPage({ searchParams }) {
             </p>
           </div>
 
-          {setupError ? <p className="banner-note">{setupError}</p> : null}
-          {detailNote ? <p className="banner-note subtle">{detailNote}</p> : null}
-
-          <form action={createHouseholdAction} className="setup-form">
-            <label className="field">
-              <span>Household name</span>
-              <input
-                name="householdName"
-                type="text"
-                placeholder="Tripathi Home"
-                required
-              />
-            </label>
-
-            <button className="primary-button" type="submit">
-              Create household
-            </button>
-          </form>
+          <CreateHouseholdForm
+            setupError={setupError}
+            detailNote={detailNote}
+          />
         </section>
       </main>
     );

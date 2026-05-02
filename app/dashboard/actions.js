@@ -16,14 +16,17 @@ const VALID_LEAVE_DECISIONS = new Set(["approved", "rejected"]);
 
 // ---------------------------------------------------------------------------
 // First-time setup: create the household.
+// Returns { error } on failure so the client form can show it inline.
+// On success, redirects (Next.js redirect throws, so nothing is returned).
 // ---------------------------------------------------------------------------
-export async function createHouseholdAction(formData) {
+export async function createHouseholdAction(_prevState, formData) {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (authError || !user) {
     redirect("/sign-in/owner");
   }
 
@@ -41,7 +44,17 @@ export async function createHouseholdAction(formData) {
   });
 
   if (error) {
-    redirectWithError("household", error);
+    console.error("createHouseholdAction error", {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+    });
+    return {
+      error:
+        error.message ||
+        "Could not create the household. Please try again.",
+    };
   }
 
   revalidatePath("/dashboard");
