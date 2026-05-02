@@ -240,6 +240,10 @@ with check (
   )
 );
 
+create policy "staff inserts own attendance"
+on public.attendance_records for insert to authenticated
+with check (public.has_assignment(assignment_id));
+
 create policy "owner updates attendance"
 on public.attendance_records for update to authenticated
 using (
@@ -256,6 +260,11 @@ with check (
       and public.is_household_owner(sa.household_id)
   )
 );
+
+create policy "staff updates own attendance"
+on public.attendance_records for update to authenticated
+using (public.has_assignment(assignment_id))
+with check (public.has_assignment(assignment_id));
 
 create policy "owner deletes attendance"
 on public.attendance_records for delete to authenticated
