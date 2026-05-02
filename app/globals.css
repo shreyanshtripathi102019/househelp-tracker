@@ -336,6 +336,11 @@ select:focus-visible {
   padding: 0;
 }
 
+.banner-note.success {
+  background: var(--present-soft);
+  color: var(--present);
+}
+
 /* =========================================================================
    Landing
    ========================================================================= */

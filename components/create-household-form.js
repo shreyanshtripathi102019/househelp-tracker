@@ -1,23 +1,15 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+// Thin client wrapper so the error banner and disabled state work,
+// but navigation on success is handled by the server action's redirect().
+import { useActionState } from "react";
 import { createHouseholdAction } from "@/app/dashboard/actions";
 
 export default function CreateHouseholdForm({ setupError, detailNote }) {
-  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     createHouseholdAction,
     null
   );
-
-  // Navigate to dashboard once the action reports success.
-  useEffect(() => {
-    if (state?.success) {
-      router.push("/dashboard");
-      router.refresh();
-    }
-  }, [state, router]);
 
   const errorMessage = state?.error || setupError || null;
 
@@ -39,16 +31,12 @@ export default function CreateHouseholdForm({ setupError, detailNote }) {
           type="text"
           placeholder="Tripathi Home"
           required
-          disabled={pending || state?.success}
+          disabled={pending}
         />
       </label>
 
-      <button
-        className="primary-button"
-        type="submit"
-        disabled={pending || state?.success}
-      >
-        {pending || state?.success ? "Creating…" : "Create household"}
+      <button className="primary-button" type="submit" disabled={pending}>
+        {pending ? "Creating…" : "Create household"}
       </button>
     </form>
   );

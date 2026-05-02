@@ -58,7 +58,7 @@ export async function createHouseholdAction(_prevState, formData) {
   }
 
   revalidatePath("/dashboard");
-  return { success: true }; // client handles navigation via router.push
+  redirect("/dashboard");
 }
 
 // ---------------------------------------------------------------------------

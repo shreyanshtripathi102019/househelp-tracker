@@ -1,67 +1,105 @@
 import Link from "next/link";
-import { requestOwnerMagicLinkAction } from "@/app/sign-in/owner/actions";
+import { signInOwnerAction, signUpOwnerAction } from "./actions";
 import { hasSupabaseEnv } from "@/lib/env";
 
-function getBanner(params) {
-  if (params?.sent === "1") {
-    return "Magic link sent. Open it on this device to continue.";
-  }
-  if (params?.error === "config") return "Supabase env vars missing.";
-  if (params?.error === "email") return "Enter an email address to continue.";
-  if (params?.error === "auth") {
-    return "Could not generate the sign-in link. Check the address and try again.";
-  }
-  if (params?.error === "mail") {
-    return "Link generated but email delivery failed. Check SMTP_USER and SMTP_PASSWORD in your environment.";
-  }
-  return null;
-}
+const BANNERS = {
+  // sign-in errors
+  config: "Supabase env vars missing.",
+  fields: "Please enter both email and password.",
+  invalid: "Incorrect email or password. Please try again.",
+  unverified: "Please verify your email first — check your inbox for the link we sent.",
+  // sign-up errors
+  weakpass: "Password must be at least 8 characters.",
+  exists: "An account with that email already exists. Sign in instead.",
+  create: "Could not create account. Please try again.",
+  link: "Account created but verification email failed. Contact support.",
+  mail: "Account created but we could not send the email. Check SMTP settings.",
+  // success
+  verify: "Account created! Check your inbox for a verification link.",
+};
 
 export default async function OwnerSignInPage({ searchParams }) {
   const params = (await searchParams) || {};
-  const banner = getBanner(params);
+  const mode = params.mode === "signup" ? "signup" : "signin";
+  const isSignUp = mode === "signup";
   const isConfigured = hasSupabaseEnv();
+
+  const bannerKey = params.sent === "verify" ? "verify" : params.error || null;
+  const banner = bannerKey ? BANNERS[bannerKey] : null;
+  const isSuccess = params.sent === "verify";
 
   return (
     <main className="page-shell narrow-shell">
       <section className="card auth-card">
-        <p className="eyebrow">Homeowner sign in</p>
-        <h1 className="auth-heading">Sign in with email</h1>
+        <p className="eyebrow">Homeowner</p>
+        <h1 className="auth-heading">
+          {isSignUp ? "Create account" : "Sign in"}
+        </h1>
         <p className="auth-sub">
-          We&apos;ll send a one-time link. Open it on this device.
+          {isSignUp
+            ? "Enter your email and choose a password. We'll send a verification link."
+            : "Enter your email and password to access your dashboard."}
         </p>
 
-        {banner ? <p className="banner-note">{banner}</p> : null}
+        {banner ? (
+          <p className={`banner-note${isSuccess ? " success" : ""}`}>
+            {banner}
+          </p>
+        ) : null}
 
-        <form action={requestOwnerMagicLinkAction} className="auth-form">
-          <label className="field">
-            <span>Email address</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              disabled={!isConfigured}
-              required
-            />
-          </label>
-
-          <button
-            className="primary-button full-width"
-            type="submit"
-            disabled={!isConfigured}
+        {!isSuccess && (
+          <form
+            action={isSignUp ? signUpOwnerAction : signInOwnerAction}
+            className="auth-form"
           >
-            Send magic link
-          </button>
-        </form>
+            <label className="field">
+              <span>Email address</span>
+              <input
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                disabled={!isConfigured}
+                required
+              />
+            </label>
+
+            <label className="field">
+              <span>Password</span>
+              <input
+                name="password"
+                type="password"
+                placeholder={isSignUp ? "At least 8 characters" : "••••••••"}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                disabled={!isConfigured}
+                required
+                minLength={isSignUp ? 8 : 1}
+              />
+            </label>
+
+            <button
+              className="primary-button full-width"
+              type="submit"
+              disabled={!isConfigured}
+            >
+              {isSignUp ? "Create account" : "Sign in"}
+            </button>
+          </form>
+        )}
 
         <div className="auth-footer">
           <Link className="text-link" href="/sign-in">
             Back
           </Link>
-          <Link className="text-link" href="/sign-in/staff">
-            I&apos;m a househelp
-          </Link>
+          {isSignUp ? (
+            <Link className="text-link" href="/sign-in/owner">
+              Already have an account?
+            </Link>
+          ) : (
+            <Link className="text-link" href="/sign-in/owner?mode=signup">
+              Create account
+            </Link>
+          )}
         </div>
       </section>
     </main>
