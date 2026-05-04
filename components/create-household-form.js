@@ -24,7 +24,7 @@ export default function CreateHouseholdForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Could not create household. Please try again.");
+        setError(data.error || `Server error (${res.status}). Check Vercel logs.`);
         setPending(false);
         return;
       }
@@ -32,7 +32,7 @@ export default function CreateHouseholdForm() {
       // Hard navigation — no framework magic, guaranteed to reload the dashboard
       window.location.href = "/dashboard";
     } catch (err) {
-      setError("Network error. Please check your connection and try again.");
+      setError(`Error: ${err.message}`);
       setPending(false);
     }
   }
@@ -40,7 +40,11 @@ export default function CreateHouseholdForm() {
   return (
     <form onSubmit={handleSubmit} className="setup-form">
       {error ? (
-        <p className="banner-note" role="alert" style={{ background: "#fee2e2", color: "#991b1b" }}>
+        <p
+          className="banner-note"
+          role="alert"
+          style={{ background: "#fee2e2", color: "#991b1b" }}
+        >
           {error}
         </p>
       ) : null}

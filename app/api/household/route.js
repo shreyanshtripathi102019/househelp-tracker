@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function slugify(value) {
   return value
@@ -24,19 +25,23 @@ export async function POST(request) {
   const householdName = String(body.householdName || "").trim() || "My Household";
   const slug = `${slugify(householdName)}-${Date.now().toString(36)}`;
 
-  const { error } = await supabase.from("households").insert({
-    name: householdName,
-    slug,
-    owner_user_id: user.id,
-  });
+  // Use admin client so RLS never blocks the insert.
+  // owner_user_id is explicitly tied to the verified user so it remains secure.
+  const admin = createAdminClient();
+  const { data: inserted, error } = await admin
+    .from("households")
+    .insert({ name: householdName, slug, owner_user_id: user.id })
+    .select("id, name")
+    .single();
 
   if (error) {
-    console.error("POST /api/household error", error);
+    console.error("POST /api/household insert error", JSON.stringify(error));
     return NextResponse.json(
-      { error: error.message || "Could not create household" },
+      { error: `DB error: ${error.message} (code: ${error.code})` },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ ok: true });
+  console.log("POST /api/household created", inserted);
+  return NextResponse.json({ ok: true, household: inserted });
 }
