@@ -1,37 +1,59 @@
 "use client";
 
-// Thin client wrapper so the error banner and disabled state work,
-// but navigation on success is handled by the server action's redirect().
-import { useActionState } from "react";
-import { createHouseholdAction } from "@/app/dashboard/actions";
+import { useState } from "react";
 
-export default function CreateHouseholdForm({ setupError, detailNote }) {
-  const [state, formAction, pending] = useActionState(
-    createHouseholdAction,
-    null
-  );
+export default function CreateHouseholdForm() {
+  const [name, setName] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(null);
 
-  const errorMessage = state?.error || setupError || null;
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setPending(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/household", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdName: name.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not create household. Please try again.");
+        setPending(false);
+        return;
+      }
+
+      // Hard navigation — no framework magic, guaranteed to reload the dashboard
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setError("Network error. Please check your connection and try again.");
+      setPending(false);
+    }
+  }
 
   return (
-    <form action={formAction} className="setup-form">
-      {errorMessage ? (
-        <p className="banner-note" role="alert">
-          {errorMessage}
+    <form onSubmit={handleSubmit} className="setup-form">
+      {error ? (
+        <p className="banner-note" role="alert" style={{ background: "#fee2e2", color: "#991b1b" }}>
+          {error}
         </p>
-      ) : null}
-      {!state?.error && detailNote ? (
-        <p className="banner-note subtle">{detailNote}</p>
       ) : null}
 
       <label className="field">
         <span>Household name</span>
         <input
-          name="householdName"
           type="text"
           placeholder="Tripathi Home"
           required
           disabled={pending}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
       </label>
 

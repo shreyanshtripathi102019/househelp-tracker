@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signInOwnerAction, signUpOwnerAction } from "./actions";
 import { hasSupabaseEnv } from "@/lib/env";
+import OwnerSignInForm from "@/components/owner-sign-in-form";
 
 const BANNERS = {
   // sign-in errors
@@ -48,44 +49,14 @@ export default async function OwnerSignInPage({ searchParams }) {
           </p>
         ) : null}
 
-        {!isSuccess && (
-          <form
+        {!isSuccess && isConfigured && (
+          <OwnerSignInForm
             action={isSignUp ? signUpOwnerAction : signInOwnerAction}
-            className="auth-form"
-          >
-            <label className="field">
-              <span>Email address</span>
-              <input
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                disabled={!isConfigured}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Password</span>
-              <input
-                name="password"
-                type="password"
-                placeholder={isSignUp ? "At least 8 characters" : "••••••••"}
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                disabled={!isConfigured}
-                required
-                minLength={isSignUp ? 8 : 1}
-              />
-            </label>
-
-            <button
-              className="primary-button full-width"
-              type="submit"
-              disabled={!isConfigured}
-            >
-              {isSignUp ? "Create account" : "Sign in"}
-            </button>
-          </form>
+            isSignUp={isSignUp}
+          />
+        )}
+        {!isConfigured && (
+          <p className="banner-note">Supabase is not configured.</p>
         )}
 
         <div className="auth-footer">
