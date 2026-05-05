@@ -22,7 +22,6 @@ export default function HomePage() {
         <div className="lp-circle lp-circle-br" aria-hidden="true" />
 
         <div className="lp-hero-content">
-          <img src="/arit-logo.png" alt="ARIT" className="lp-hero-logo" />
           <p className="lp-eyebrow">Household staff management</p>
           <h1 className="lp-headline">
             Track attendance.<br />

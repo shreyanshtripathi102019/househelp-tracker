@@ -1144,7 +1144,7 @@ select:focus-visible {
 
 .lp-root {
   min-height: 100vh;
-  background: #efefed;
+  background: #ffffff;
   color: #111110;
   display: flex;
   flex-direction: column;
@@ -1156,7 +1156,7 @@ select:focus-visible {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(239, 239, 237, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(0,0,0,0.07);
@@ -1268,7 +1268,7 @@ select:focus-visible {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #1d4435;
+  color: #111110;
   margin: 0;
 }
 
@@ -1341,7 +1341,7 @@ select:focus-visible {
 /* ── Features strip ── */
 .lp-features {
   border-top: 1px solid rgba(0,0,0,0.08);
-  background: #e8e8e6;
+  background: #f5f5f3;
 }
 
 .lp-features-inner {
@@ -1390,7 +1390,7 @@ select:focus-visible {
 /* ── Footer ── */
 .lp-footer {
   border-top: 1px solid rgba(0,0,0,0.08);
-  background: #efefed;
+  background: #ffffff;
 }
 
 .lp-footer-inner {
