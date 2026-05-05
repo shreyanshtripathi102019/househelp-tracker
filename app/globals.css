@@ -1196,6 +1196,20 @@ select:focus-visible {
   letter-spacing: 0.01em;
 }
 
+.lp-nav-sep {
+  display: block;
+  width: 1px;
+  height: 16px;
+  background: rgba(0,0,0,0.2);
+}
+
+.lp-nav-product {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #555551;
+  letter-spacing: -0.01em;
+}
+
 /* ── Hero ── */
 .lp-hero {
   position: relative;

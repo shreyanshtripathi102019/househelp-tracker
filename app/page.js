@@ -7,10 +7,12 @@ export default function HomePage() {
       <header className="lp-nav">
         <div className="lp-nav-inner">
           <Link href="/" className="lp-logo" aria-label="ARIT Home">
+            {/* Replace AritA with <img src="/arit-logo.png" … /> once logo file is added */}
             <AritA />
             <span className="lp-wordmark">ARIT</span>
+            <span className="lp-nav-sep" aria-hidden="true" />
+            <span className="lp-nav-product">Home</span>
           </Link>
-          <span className="lp-pill-tag">ARIT Home</span>
         </div>
       </header>
 
