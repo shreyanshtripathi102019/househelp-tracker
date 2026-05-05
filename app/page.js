@@ -7,8 +7,7 @@ export default function HomePage() {
       <header className="lp-nav">
         <div className="lp-nav-inner">
           <Link href="/" className="lp-logo" aria-label="ARIT Home">
-            {/* Replace AritA with <img src="/arit-logo.png" … /> once logo file is added */}
-            <AritA />
+            <img src="/arit-logo.svg" alt="" width={32} height={38} className="lp-logo-img" />
             <span className="lp-wordmark">ARIT</span>
             <span className="lp-nav-sep" aria-hidden="true" />
             <span className="lp-nav-product">Home</span>
@@ -71,8 +70,8 @@ export default function HomePage() {
       {/* ── Footer ── */}
       <footer className="lp-footer">
         <div className="lp-footer-inner">
-          <Link href="https://arit.co.in" className="lp-logo" target="_blank">
-            <AritA small />
+          <Link href="https://arit.co.in" className="lp-logo" target="_blank" rel="noopener noreferrer">
+            <img src="/arit-logo.svg" alt="" width={22} height={26} className="lp-logo-img" />
             <span className="lp-wordmark">ARIT</span>
           </Link>
           <p className="lp-footer-text">
@@ -84,18 +83,3 @@ export default function HomePage() {
   );
 }
 
-function AritA({ small }) {
-  const s = small ? 20 : 26;
-  return (
-    <svg width={s} height={s} viewBox="0 0 26 26" fill="none" aria-hidden="true">
-      <path
-        d="M13 3L22 21H4L13 3Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <line x1="8.5" y1="15.5" x2="17.5" y2="15.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}

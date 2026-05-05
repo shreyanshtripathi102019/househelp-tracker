@@ -1196,6 +1196,11 @@ select:focus-visible {
   letter-spacing: 0.01em;
 }
 
+.lp-logo-img {
+  display: block;
+  flex-shrink: 0;
+}
+
 .lp-nav-sep {
   display: block;
   width: 1px;

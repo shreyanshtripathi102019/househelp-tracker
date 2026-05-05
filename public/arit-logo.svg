@@ -1,0 +1,11 @@
+<svg viewBox="0 0 58 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- A mark: two legs + crossbar, inner triangle cut out -->
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M29 2L2 66H13L19.5 48H38.5L45 66H56L29 2ZM29 16L35.5 44H22.5L29 16Z"
+    fill="#111820"
+  />
+  <!-- Gold triangle accent — lower right of the A -->
+  <path d="M39 52L54 64L39 64Z" fill="#C9A535"/>
+</svg>
