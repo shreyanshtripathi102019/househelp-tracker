@@ -14,61 +14,21 @@ const VALID_STATUSES = new Set(["present", "absent", "leave", "half_day"]);
 const VALID_ROLES = new Set(["cook", "cleaner", "nanny", "driver", "other"]);
 const VALID_LEAVE_DECISIONS = new Set(["approved", "rejected"]);
 
-// ---------------------------------------------------------------------------
-// First-time setup: create the household.
-// ---------------------------------------------------------------------------
-export async function createHouseholdAction(formData) {
+// Shared helper — verify identity and return user + admin client.
+async function getAuthContext() {
   const supabase = await createClient();
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    redirect("/sign-in/owner");
-  }
-
-  const householdName =
-    String(formData.get("householdName") || "").trim() || "My Household";
-  const slug = `${slugify(householdName)}-${Date.now().toString(36)}`;
-
-  const householdId = randomUuid();
-
-  const { error } = await supabase.from("households").insert({
-    id: householdId,
-    name: householdName,
-    slug,
-    owner_user_id: user.id,
-  });
-
-  if (error) {
-    console.error("createHouseholdAction error", {
-      code: error?.code,
-      message: error?.message,
-      details: error?.details,
-      hint: error?.hint,
-    });
-    redirectWithError("household", error);
-  }
-
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  if (!user) redirect("/sign-in/owner");
+  return { user, admin: createAdminClient() };
 }
 
 // ---------------------------------------------------------------------------
-// Add a staff member: creates a Supabase auth user + staff_profile + assignment.
-// Returns the freshly generated code + PIN through the URL so the owner can
-// copy it (we never store the plaintext PIN ourselves).
+// Add a staff member
 // ---------------------------------------------------------------------------
 export async function addStaffAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/owner");
-  }
+  const { user, admin } = await getAuthContext();
 
   const fullName = String(formData.get("fullName") || "").trim();
   const role = String(formData.get("role") || "").trim();
@@ -79,16 +39,12 @@ export async function addStaffAction(formData) {
     .trim()
     .toUpperCase();
 
-  if (!fullName && !reuseStaffCode) {
+  if (!fullName && !reuseStaffCode)
     redirectWithError("staff", { message: "Name is required for a new staff." });
-  }
-
-  if (!VALID_ROLES.has(role)) {
+  if (!VALID_ROLES.has(role))
     redirectWithError("staff", { message: "Pick a valid role." });
-  }
 
-  // Find owner's household
-  const { data: household } = await supabase
+  const { data: household } = await admin
     .from("households")
     .select("id")
     .eq("owner_user_id", user.id)
@@ -96,41 +52,32 @@ export async function addStaffAction(formData) {
     .limit(1)
     .maybeSingle();
 
-  if (!household) {
+  if (!household)
     redirectWithError("staff", { message: "Create a household first." });
-  }
 
   const monthlySalary = monthlySalaryRaw ? Number(monthlySalaryRaw) : null;
-  if (monthlySalaryRaw && Number.isNaN(monthlySalary)) {
+  if (monthlySalaryRaw && Number.isNaN(monthlySalary))
     redirectWithError("staff", { message: "Salary must be a number." });
-  }
-
-  const admin = createAdminClient();
 
   let staffProfileId;
   let staffCode;
   let plaintextPin = null;
-  let mode = "new";
 
   if (reuseStaffCode) {
-    // Owner is attaching an existing staff (by code) to their household.
     const { data: existing, error: lookupError } = await admin
       .from("staff_profiles")
       .select("id, staff_code, full_name")
       .eq("staff_code", reuseStaffCode)
       .maybeSingle();
 
-    if (lookupError || !existing) {
+    if (lookupError || !existing)
       redirectWithError("staff", {
         message: "No staff found with that code. Ask them to read it again.",
       });
-    }
 
     staffProfileId = existing.id;
     staffCode = existing.staff_code;
-    mode = "reuse";
   } else {
-    // Provision a brand-new staff: auth user → profile.
     staffCode = generateStaffCode();
     plaintextPin = generateStaffPin();
     const email = staffEmailFromCode(staffCode);
@@ -140,15 +87,11 @@ export async function addStaffAction(formData) {
         email,
         password: plaintextPin,
         email_confirm: true,
-        user_metadata: {
-          role: "staff",
-          full_name: fullName,
-        },
+        user_metadata: { role: "staff", full_name: fullName },
       });
 
-    if (createError || !created?.user) {
+    if (createError || !created?.user)
       redirectWithError("staff", createError || { message: "Auth provision failed." });
-    }
 
     const { data: profile, error: profileError } = await admin
       .from("staff_profiles")
@@ -163,7 +106,6 @@ export async function addStaffAction(formData) {
       .single();
 
     if (profileError || !profile) {
-      // Roll back the auth user so we don't leak orphans
       await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
       redirectWithError("staff", profileError || { message: "Profile insert failed." });
     }
@@ -171,8 +113,6 @@ export async function addStaffAction(formData) {
     staffProfileId = profile.id;
   }
 
-  // Create the assignment. If one already exists for this household + staff,
-  // upsert to update fields rather than failing on the unique constraint.
   const { error: assignError } = await admin.from("staff_assignments").upsert(
     {
       household_id: household.id,
@@ -185,9 +125,7 @@ export async function addStaffAction(formData) {
     { onConflict: "household_id,staff_profile_id" }
   );
 
-  if (assignError) {
-    redirectWithError("staff", assignError);
-  }
+  if (assignError) redirectWithError("staff", assignError);
 
   revalidatePath("/dashboard");
 
@@ -205,47 +143,31 @@ export async function addStaffAction(formData) {
 }
 
 // ---------------------------------------------------------------------------
-// Reset PIN for an existing staff (owner action).
+// Reset PIN
 // ---------------------------------------------------------------------------
 export async function resetStaffPinAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/owner");
-  }
+  const { admin } = await getAuthContext();
 
   const assignmentId = String(formData.get("assignmentId") || "").trim();
-  if (!assignmentId) {
-    redirectWithError("pin", { message: "Missing assignment id." });
-  }
+  if (!assignmentId) redirectWithError("pin", { message: "Missing assignment id." });
 
-  // Verify owner has rights through their household
-  const { data: assignment } = await supabase
+  const { data: assignment } = await admin
     .from("staff_assignments")
-    .select(
-      "id, household_id, staff_profiles(id, auth_user_id, staff_code, full_name)"
-    )
+    .select("id, household_id, staff_profiles(id, auth_user_id, staff_code, full_name)")
     .eq("id", assignmentId)
     .maybeSingle();
 
-  if (!assignment || !assignment.staff_profiles) {
+  if (!assignment || !assignment.staff_profiles)
     redirectWithError("pin", { message: "Staff not found." });
-  }
 
   const newPin = generateStaffPin();
-  const admin = createAdminClient();
 
   const { error } = await admin.auth.admin.updateUserById(
     assignment.staff_profiles.auth_user_id,
     { password: newPin }
   );
 
-  if (error) {
-    redirectWithError("pin", error);
-  }
+  if (error) redirectWithError("pin", error);
 
   revalidatePath("/dashboard");
   const sp = new URLSearchParams({
@@ -258,49 +180,30 @@ export async function resetStaffPinAction(formData) {
 }
 
 // ---------------------------------------------------------------------------
-// Remove (deactivate) a staff assignment from this household.
-// We do not delete the staff_profile so they can still log in for other homes.
+// Deactivate assignment
 // ---------------------------------------------------------------------------
 export async function deactivateAssignmentAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/owner");
-  }
+  const { admin } = await getAuthContext();
 
   const assignmentId = String(formData.get("assignmentId") || "").trim();
-  if (!assignmentId) {
-    redirectWithError("remove", { message: "Missing assignment id." });
-  }
+  if (!assignmentId) redirectWithError("remove", { message: "Missing assignment id." });
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("staff_assignments")
     .update({ is_active: false })
     .eq("id", assignmentId);
 
-  if (error) {
-    redirectWithError("remove", error);
-  }
+  if (error) redirectWithError("remove", error);
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
 
 // ---------------------------------------------------------------------------
-// Mark / change attendance for a single (assignment, date).
+// Save attendance
 // ---------------------------------------------------------------------------
 export async function saveAttendanceAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/owner");
-  }
+  const { user, admin } = await getAuthContext();
 
   const assignmentId = String(formData.get("assignmentId") || "").trim();
   const attendanceDate = String(formData.get("attendanceDate") || "").trim();
@@ -312,7 +215,7 @@ export async function saveAttendanceAction(formData) {
     return;
   }
 
-  await supabase.from("attendance_records").upsert(
+  await admin.from("attendance_records").upsert(
     {
       assignment_id: assignmentId,
       attendance_date: attendanceDate,
@@ -327,42 +230,32 @@ export async function saveAttendanceAction(formData) {
 }
 
 // ---------------------------------------------------------------------------
-// Approve or reject a leave. Approval also writes 'leave' attendance
-// records for each day in the range.
+// Decide leave
 // ---------------------------------------------------------------------------
 export async function decideLeaveAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/owner");
-  }
+  const { user, admin } = await getAuthContext();
 
   const leaveId = String(formData.get("leaveId") || "").trim();
   const decision = String(formData.get("decision") || "").trim();
 
-  if (!leaveId || !VALID_LEAVE_DECISIONS.has(decision)) {
+  if (!leaveId || !VALID_LEAVE_DECISIONS.has(decision))
     redirectWithError("leave", { message: "Invalid leave decision." });
-  }
 
-  const { data: leave, error: fetchError } = await supabase
+  const { data: leave, error: fetchError } = await admin
     .from("leave_requests")
     .select("id, assignment_id, start_date, end_date, status")
     .eq("id", leaveId)
     .maybeSingle();
 
-  if (fetchError || !leave) {
+  if (fetchError || !leave)
     redirectWithError("leave", fetchError || { message: "Leave not found." });
-  }
 
   if (leave.status !== "pending") {
     revalidatePath("/dashboard");
     redirect("/dashboard");
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from("leave_requests")
     .update({
       status: decision,
@@ -371,9 +264,7 @@ export async function decideLeaveAction(formData) {
     })
     .eq("id", leaveId);
 
-  if (updateError) {
-    redirectWithError("leave", updateError);
-  }
+  if (updateError) redirectWithError("leave", updateError);
 
   if (decision === "approved") {
     const days = enumerateDates(leave.start_date, leave.end_date);
@@ -385,7 +276,7 @@ export async function decideLeaveAction(formData) {
         note: "Auto from approved leave request",
         marked_by: user.id,
       }));
-      await supabase
+      await admin
         .from("attendance_records")
         .upsert(rows, { onConflict: "assignment_id,attendance_date" });
     }
@@ -398,25 +289,6 @@ export async function decideLeaveAction(formData) {
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
-
-function slugify(value) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 48);
-}
-
-function randomUuid() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
-    const random = (Math.random() * 16) | 0;
-    const value = char === "x" ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
-}
 
 function enumerateDates(startDate, endDate) {
   const out = [];
@@ -432,23 +304,15 @@ function enumerateDates(startDate, endDate) {
 }
 
 function redirectWithError(stage, error) {
-  const detail = buildErrorDetail(error);
   console.error(`owner action error [${stage}]`, {
     code: error?.code || null,
     message: error?.message || null,
     details: error?.details || null,
     hint: error?.hint || null,
   });
+  const detail = [error?.code, error?.message, error?.details, error?.hint]
+    .filter(Boolean)
+    .join(" | ")
+    .slice(0, 240) || "Unknown error";
   redirect(`/dashboard?error=${stage}&detail=${encodeURIComponent(detail)}`);
-}
-
-function buildErrorDetail(error) {
-  const pieces = [
-    error?.code,
-    error?.message,
-    error?.details,
-    error?.hint,
-  ].filter(Boolean);
-  if (!pieces.length) return "Unknown error";
-  return pieces.join(" | ").slice(0, 240);
 }
