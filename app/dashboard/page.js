@@ -3,14 +3,7 @@ import OwnerWorkspace from "@/components/owner-workspace";
 import CreateHouseholdForm from "@/components/create-household-form";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-
-const SETUP_ERROR_MESSAGES = {
-  household: "We could not create the household. Try again.",
-  staff: "We could not save the staff member. Try again.",
-  pin: "We could not reset the PIN. Try again.",
-  remove: "We could not remove the staff member.",
-  leave: "We could not update the leave request.",
-};
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function DashboardPage({ searchParams }) {
   const params = (await searchParams) || {};
@@ -32,6 +25,7 @@ export default async function DashboardPage({ searchParams }) {
     );
   }
 
+  // Verify identity with the user-scoped client (validates the JWT).
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,14 +35,15 @@ export default async function DashboardPage({ searchParams }) {
     redirect("/sign-in/owner");
   }
 
-  // If the signed-in user is actually a staff (synthetic email), bounce them
-  // to their own dashboard.
   if (user.email && user.email.endsWith("@staff.arit.local")) {
     redirect("/staff/dashboard");
   }
 
-  // Find this owner's household. For now we assume one household per owner.
-  const { data: household } = await supabase
+  // Use admin client for all DB reads so RLS never silently blocks data.
+  // Security is enforced by filtering on user.id from the verified JWT above.
+  const admin = createAdminClient();
+
+  const { data: household } = await admin
     .from("households")
     .select("id, name, slug, created_at")
     .eq("owner_user_id", user.id)
@@ -57,12 +52,6 @@ export default async function DashboardPage({ searchParams }) {
     .maybeSingle();
 
   if (!household) {
-    const setupError = params.error
-      ? SETUP_ERROR_MESSAGES[params.error] ||
-        "Something went wrong. Try again."
-      : null;
-    const detailNote = params.detail ? decodeURIComponent(params.detail) : null;
-
     return (
       <main className="page-shell compact-shell">
         <section className="card setup-card">
@@ -73,15 +62,13 @@ export default async function DashboardPage({ searchParams }) {
               Give your home a name. You&apos;ll add staff in the next step.
             </p>
           </div>
-
-          {setupError ? <p className="banner-note">{setupError}</p> : null}
           <CreateHouseholdForm />
         </section>
       </main>
     );
   }
 
-  const { data: assignmentsRaw = [] } = await supabase
+  const { data: assignmentsRaw = [] } = await admin
     .from("staff_assignments")
     .select(
       "id, role, monthly_salary, start_date, is_active, staff_profile_id, staff_profiles(id, full_name, staff_code, phone)"
@@ -119,13 +106,13 @@ export default async function DashboardPage({ searchParams }) {
 
   if (activeAssignmentIds.length) {
     const [{ data: aData = [] }, { data: lData = [] }] = await Promise.all([
-      supabase
+      admin
         .from("attendance_records")
         .select("id, assignment_id, attendance_date, status, note, updated_at")
         .in("assignment_id", activeAssignmentIds)
         .gte("attendance_date", rangeStart.toISOString().slice(0, 10))
         .lte("attendance_date", rangeEnd.toISOString().slice(0, 10)),
-      supabase
+      admin
         .from("leave_requests")
         .select(
           "id, assignment_id, start_date, end_date, reason, status, created_at, decided_at"
@@ -138,8 +125,6 @@ export default async function DashboardPage({ searchParams }) {
     leaveRows = lData || [];
   }
 
-  // Read once-shown PIN/code from URL query params, then it disappears on the
-  // next interaction. We never persist plaintext PINs in the DB.
   const fresh =
     params.staffCode && params.staffPin
       ? {
