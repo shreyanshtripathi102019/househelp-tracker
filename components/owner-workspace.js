@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   addStaffAction,
   resetStaffPinAction,
@@ -525,6 +525,16 @@ function FreshCredentialsCard({ credentials }) {
 
 function AddStaffForm({ onClose }) {
   const [mode, setMode] = useState("new");
+  const [isPending, startTransition] = useTransition();
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(formData) {
+    if (submitted) return; // guard against double-fire
+    setSubmitted(true);
+    startTransition(() => addStaffAction(formData));
+  }
+
+  const busy = isPending || submitted;
 
   return (
     <section className="card add-staff-card">
@@ -533,7 +543,7 @@ function AddStaffForm({ onClose }) {
           <p className="section-kicker">Add staff</p>
           <h2>{mode === "new" ? "New staff" : "Existing staff (with code)"}</h2>
         </div>
-        <button type="button" className="text-link" onClick={onClose}>
+        <button type="button" className="text-link" onClick={onClose} disabled={busy}>
           Close
         </button>
       </div>
@@ -543,6 +553,7 @@ function AddStaffForm({ onClose }) {
           type="button"
           className={`mode-button ${mode === "new" ? "is-active" : ""}`}
           onClick={() => setMode("new")}
+          disabled={busy}
         >
           New person
         </button>
@@ -550,21 +561,22 @@ function AddStaffForm({ onClose }) {
           type="button"
           className={`mode-button ${mode === "reuse" ? "is-active" : ""}`}
           onClick={() => setMode("reuse")}
+          disabled={busy}
         >
           Use existing code
         </button>
       </div>
 
-      <form action={addStaffAction} className="setup-form">
+      <form action={handleSubmit} className="setup-form">
         {mode === "new" ? (
           <>
             <label className="field">
               <span>Full name</span>
-              <input name="fullName" type="text" placeholder="Sita Devi" required />
+              <input name="fullName" type="text" placeholder="Sita Devi" required disabled={busy} />
             </label>
             <label className="field">
               <span>Phone (optional)</span>
-              <input name="phone" type="tel" placeholder="+91 9xxxxxxxxx" />
+              <input name="phone" type="tel" placeholder="+91 9xxxxxxxxx" disabled={busy} />
             </label>
           </>
         ) : (
@@ -577,6 +589,7 @@ function AddStaffForm({ onClose }) {
               required
               autoComplete="off"
               style={{ textTransform: "uppercase" }}
+              disabled={busy}
             />
           </label>
         )}
@@ -584,7 +597,7 @@ function AddStaffForm({ onClose }) {
         <div className="input-grid">
           <label className="field">
             <span>Role</span>
-            <select name="role" defaultValue="cook" required>
+            <select name="role" defaultValue="cook" required disabled={busy}>
               {ROLE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -594,17 +607,21 @@ function AddStaffForm({ onClose }) {
           </label>
           <label className="field">
             <span>Monthly salary (₹, optional)</span>
-            <input name="monthlySalary" type="number" min="0" placeholder="6000" />
+            <input name="monthlySalary" type="number" min="0" placeholder="6000" disabled={busy} />
           </label>
         </div>
 
         <label className="field">
           <span>Start date (optional)</span>
-          <input name="startDate" type="date" />
+          <input name="startDate" type="date" disabled={busy} />
         </label>
 
-        <button className="primary-button" type="submit">
-          {mode === "new" ? "Add and generate PIN" : "Add to household"}
+        <button className="primary-button" type="submit" disabled={busy}>
+          {busy
+            ? "Adding…"
+            : mode === "new"
+            ? "Add and generate PIN"
+            : "Add to household"}
         </button>
       </form>
     </section>
