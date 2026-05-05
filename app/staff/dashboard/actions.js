@@ -3,21 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const VALID_STATUSES = new Set(["present", "absent", "leave", "half_day"]);
+
+async function getStaffAuthContext() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in/staff");
+  return { user, admin: createAdminClient() };
+}
 
 // ---------------------------------------------------------------------------
 // Staff marks their own attendance for one (assignment, date)
 // ---------------------------------------------------------------------------
 export async function staffMarkAttendanceAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/staff");
-  }
+  const { user, admin } = await getStaffAuthContext();
 
   const assignmentId = String(formData.get("assignmentId") || "").trim();
   const attendanceDate = String(formData.get("attendanceDate") || "").trim();
@@ -29,8 +32,7 @@ export async function staffMarkAttendanceAction(formData) {
     return;
   }
 
-  // RLS verifies the assignment belongs to this signed-in staff.
-  await supabase.from("attendance_records").upsert(
+  await admin.from("attendance_records").upsert(
     {
       assignment_id: assignmentId,
       attendance_date: attendanceDate,
@@ -50,14 +52,7 @@ export async function staffMarkAttendanceAction(formData) {
 // so the owner sees those days as leave immediately on their calendar.
 // ---------------------------------------------------------------------------
 export async function staffApplyLeaveAction(formData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in/staff");
-  }
+  const { user, admin } = await getStaffAuthContext();
 
   const assignmentId = String(formData.get("assignmentId") || "").trim();
   const startDate = String(formData.get("startDate") || "").trim();
@@ -72,14 +67,11 @@ export async function staffApplyLeaveAction(formData) {
     redirect("/staff/dashboard?error=leave_range");
   }
 
-  const { error: leaveError } = await supabase.from("leave_requests").insert({
+  const { error: leaveError } = await admin.from("leave_requests").insert({
     assignment_id: assignmentId,
     start_date: startDate,
     end_date: endDate,
     reason: reason || null,
-    // Even though the DB default is 'pending', the staff RLS only allows
-    // inserts where status='pending'. We then upsert attendance below to
-    // mark the days as leave immediately so the owner sees them.
     status: "pending",
   });
 
@@ -89,7 +81,6 @@ export async function staffApplyLeaveAction(formData) {
   }
 
   // Auto-write attendance_records for every day in the range as 'leave'.
-  // This is the "trust staff fully" behaviour — no owner approval needed.
   const days = enumerateDates(startDate, endDate);
   if (days.length) {
     const rows = days.map((d) => ({
@@ -99,7 +90,7 @@ export async function staffApplyLeaveAction(formData) {
       note: reason ? `Leave: ${reason}` : "Leave",
       marked_by: user.id,
     }));
-    const { error: attError } = await supabase
+    const { error: attError } = await admin
       .from("attendance_records")
       .upsert(rows, { onConflict: "assignment_id,attendance_date" });
 

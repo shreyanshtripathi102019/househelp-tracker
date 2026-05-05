@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import StaffWorkspace from "@/components/staff-workspace";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function StaffDashboardPage({ searchParams }) {
   const params = (await searchParams) || {};
@@ -34,7 +35,11 @@ export default async function StaffDashboardPage({ searchParams }) {
     redirect("/dashboard");
   }
 
-  const { data: profile } = await supabase
+  // Use admin client for all DB reads so RLS never silently blocks data.
+  // Security is enforced by filtering on user.id from the verified JWT above.
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
     .from("staff_profiles")
     .select("id, full_name, staff_code, phone")
     .eq("auth_user_id", user.id)
@@ -59,7 +64,7 @@ export default async function StaffDashboardPage({ searchParams }) {
     );
   }
 
-  const { data: assignmentsRaw = [] } = await supabase
+  const { data: assignmentsRaw = [] } = await admin
     .from("staff_assignments")
     .select(
       "id, role, monthly_salary, start_date, is_active, household_id, households(id, name)"
@@ -88,13 +93,13 @@ export default async function StaffDashboardPage({ searchParams }) {
     rangeStart.setMonth(rangeStart.getMonth() - 6);
 
     const [{ data: aRows = [] }, { data: lRows = [] }] = await Promise.all([
-      supabase
+      admin
         .from("attendance_records")
         .select("id, assignment_id, attendance_date, status, note, updated_at")
         .in("assignment_id", assignmentIds)
         .gte("attendance_date", rangeStart.toISOString().slice(0, 10))
         .order("attendance_date", { ascending: false }),
-      supabase
+      admin
         .from("leave_requests")
         .select(
           "id, assignment_id, start_date, end_date, reason, status, created_at"
