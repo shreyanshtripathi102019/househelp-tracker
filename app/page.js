@@ -7,7 +7,7 @@ export default function HomePage() {
       <header className="lp-nav">
         <div className="lp-nav-inner">
           <Link href="/" className="lp-logo" aria-label="ARIT Home">
-            <img src="/arit-logo.png" alt="" width={32} height={38} className="lp-logo-img" />
+            <img src="/arit-logo.svg" alt="" width={32} height={38} className="lp-logo-img" />
             <span className="lp-wordmark">ARIT</span>
             <span className="lp-nav-sep" aria-hidden="true" />
             <span className="lp-nav-product">Home</span>
@@ -22,6 +22,7 @@ export default function HomePage() {
         <div className="lp-circle lp-circle-br" aria-hidden="true" />
 
         <div className="lp-hero-content">
+          <img src="/arit-logo.png" alt="ARIT" className="lp-hero-logo" />
           <p className="lp-eyebrow">Household staff management</p>
           <h1 className="lp-headline">
             Track attendance.<br />
