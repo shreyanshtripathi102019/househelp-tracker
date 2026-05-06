@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import OwnerWorkspace from "@/components/owner-workspace";
 import CreateHouseholdForm from "@/components/create-household-form";
+import SiteNav from "@/components/site-nav";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -53,18 +54,21 @@ export default async function DashboardPage({ searchParams }) {
 
   if (!household) {
     return (
-      <main className="page-shell compact-shell">
-        <section className="card setup-card">
-          <div className="section-heading">
-            <p className="eyebrow">First-time setup</p>
-            <h1>Create your household</h1>
-            <p className="hero-text">
-              Give your home a name. You&apos;ll add staff in the next step.
-            </p>
-          </div>
-          <CreateHouseholdForm />
-        </section>
-      </main>
+      <>
+        <SiteNav />
+        <main className="page-shell compact-shell">
+          <section className="card setup-card">
+            <div className="section-heading">
+              <p className="eyebrow">First-time setup</p>
+              <h1>Create your household</h1>
+              <p className="hero-text">
+                Give your home a name. You&apos;ll add staff in the next step.
+              </p>
+            </div>
+            <CreateHouseholdForm />
+          </section>
+        </main>
+      </>
     );
   }
 
@@ -136,15 +140,18 @@ export default async function DashboardPage({ searchParams }) {
       : null;
 
   return (
-    <main className="page-shell">
-      <OwnerWorkspace
-        household={household}
-        assignments={assignments}
-        attendance={attendanceRows}
-        leaves={leaveRows}
-        userEmail={user.email || ""}
-        freshCredentials={fresh}
-      />
-    </main>
+    <>
+      <SiteNav />
+      <main className="page-shell">
+        <OwnerWorkspace
+          household={household}
+          assignments={assignments}
+          attendance={attendanceRows}
+          leaves={leaveRows}
+          userEmail={user.email || ""}
+          freshCredentials={fresh}
+        />
+      </main>
+    </>
   );
 }

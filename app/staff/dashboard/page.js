@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import StaffWorkspace from "@/components/staff-workspace";
+import SiteNav from "@/components/site-nav";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -115,15 +116,18 @@ export default async function StaffDashboardPage({ searchParams }) {
   const banner = bannerFor(params);
 
   return (
-    <main className="page-shell">
-      <StaffWorkspace
-        profile={profile}
-        assignments={assignments}
-        attendance={attendance}
-        leaves={leaves}
-        banner={banner}
-      />
-    </main>
+    <>
+      <SiteNav />
+      <main className="page-shell">
+        <StaffWorkspace
+          profile={profile}
+          assignments={assignments}
+          attendance={attendance}
+          leaves={leaves}
+          banner={banner}
+        />
+      </main>
+    </>
   );
 }
 
