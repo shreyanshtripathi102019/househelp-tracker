@@ -148,7 +148,7 @@ export default async function DashboardPage({ searchParams }) {
           assignments={assignments}
           attendance={attendanceRows}
           leaves={leaveRows}
-          userEmail={user.email || ""}
+          ownerName={user.user_metadata?.full_name || user.email?.split("@")[0] || "Owner"}
           freshCredentials={fresh}
         />
       </main>

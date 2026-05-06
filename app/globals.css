@@ -1140,6 +1140,276 @@ select:focus-visible {
 }
 
 /* =========================================================================
+   Owner workspace — new clean layout
+   ========================================================================= */
+
+.ow-root {
+  display: grid;
+  gap: 12px;
+}
+
+/* Hero */
+.ow-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.ow-hero-left {
+  display: grid;
+  gap: 2px;
+}
+
+.ow-household {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.ow-owner {
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.ow-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ow-today-text {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.ow-hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Staff tabs */
+.ow-staff-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ow-staff-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.ow-staff-tab:hover {
+  background: var(--surface-soft);
+}
+
+.ow-staff-tab.is-active {
+  background: #111110;
+  color: #fff;
+  border-color: #111110;
+}
+
+.ow-staff-tab.is-active .ow-tab-role {
+  color: rgba(255,255,255,0.55);
+}
+
+.ow-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ow-tab-dot.status-present { background: var(--present); }
+.ow-tab-dot.status-absent  { background: var(--absent);  }
+.ow-tab-dot.status-leave   { background: var(--leave);   }
+.ow-tab-dot.status-half    { background: var(--half);    }
+.ow-tab-dot.status-empty   { background: var(--empty-soft); border: 1px solid var(--line-strong); }
+
+.ow-tab-name {
+  font-weight: 600;
+}
+
+.ow-tab-role {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.ow-empty {
+  padding: 24px;
+  color: var(--ink-soft);
+  font-size: 0.93rem;
+}
+
+/* Main card */
+.ow-main-card {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* View tabs bar */
+.ow-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 20px;
+  flex-wrap: wrap;
+}
+
+.ow-view-tab {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding: 14px 16px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.ow-view-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.ow-view-tab:hover {
+  color: var(--ink);
+}
+
+.ow-quick-marks {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.ow-mark-btn {
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.ow-mark-btn.present {
+  color: var(--present);
+  border-color: var(--present-soft);
+  background: var(--present-soft);
+}
+
+.ow-mark-btn.absent {
+  color: var(--absent);
+  border-color: var(--absent-soft);
+  background: var(--absent-soft);
+}
+
+/* Calendar content */
+.ow-calendar-content {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.ow-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ow-summary {
+  grid-template-columns: repeat(4, auto);
+}
+
+/* Activity content */
+.ow-activity-content {
+  padding: 20px;
+}
+
+.ow-empty-msg {
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+
+/* Staff management footer */
+.ow-staff-options {
+  border-top: 1px solid var(--line);
+  padding: 14px 20px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.ow-staff-options summary {
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+  color: var(--ink-faint);
+}
+
+.ow-staff-options summary::-webkit-details-marker { display: none; }
+
+.ow-staff-options-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.ow-salary {
+  color: var(--ink-faint);
+}
+
+/* Credentials card */
+.ow-creds-card {
+  background: #fafaf8;
+}
+
+/* Add staff card */
+.ow-add-card {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .ow-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ow-hero-right {
+    align-items: flex-start;
+  }
+  .ow-quick-marks {
+    display: none;
+  }
+  .ow-cal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* =========================================================================
    Global site nav (appears on all pages except landing which has its own)
    ========================================================================= */
 
