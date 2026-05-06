@@ -47,26 +47,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Features strip ── */}
-      <section className="lp-features">
-        <div className="lp-features-inner">
-          <div className="lp-feat">
-            <p className="lp-feat-title">Daily attendance</p>
-            <p className="lp-feat-body">Mark present, absent, leave or half-day. Monthly summaries for every staff member.</p>
-          </div>
-          <div className="lp-feat-divider" />
-          <div className="lp-feat">
-            <p className="lp-feat-title">No email, no app</p>
-            <p className="lp-feat-body">Staff use a 6-character code and PIN you share on WhatsApp. Works on any phone.</p>
-          </div>
-          <div className="lp-feat-divider" />
-          <div className="lp-feat">
-            <p className="lp-feat-title">Leave requests</p>
-            <p className="lp-feat-body">Staff apply for leave from their phone. It reflects on your calendar instantly.</p>
-          </div>
-        </div>
-      </section>
-
       {/* ── Footer ── */}
       <footer className="lp-footer">
         <div className="lp-footer-inner">
