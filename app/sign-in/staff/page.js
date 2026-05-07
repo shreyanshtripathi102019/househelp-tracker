@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { staffSignInAction } from "@/app/sign-in/staff/actions";
 import { hasSupabaseEnv } from "@/lib/env";
-import { STAFF_CODE_LENGTH, STAFF_PIN_LENGTH } from "@/lib/staff-auth";
 
 function getBanner(params) {
   if (params?.error === "config") {
     return "The portal is not configured yet. Ask your employer to try again later.";
   }
-  if (params?.error === "missing") return "Please enter both your code and PIN.";
+  if (params?.error === "missing") return "Please enter both your phone number and PIN.";
+  if (params?.error === "invalid_phone") return "Please enter a valid 10-digit mobile number.";
+  if (params?.error === "invalid_pin") return "PIN must be 4–6 digits.";
+  if (params?.error === "not_found") {
+    return "No account found for this phone number. Ask your employer to add your phone.";
+  }
   if (params?.error === "invalid") {
-    return "That code or PIN is not correct. Ask your employer to share again or reset.";
+    return "Wrong PIN. Ask your employer to reset it if you've forgotten.";
   }
   return null;
 }
@@ -23,26 +27,25 @@ export default async function StaffSignInPage({ searchParams }) {
     <main className="page-shell narrow-shell">
       <section className="card auth-card">
         <p className="eyebrow">Househelp sign in</p>
-        <h1 className="auth-heading">Enter your code and PIN</h1>
+        <h1 className="auth-heading">Enter your phone &amp; PIN</h1>
         <p className="auth-sub">
-          Your employer shared a {STAFF_CODE_LENGTH}-letter code and a{" "}
-          {STAFF_PIN_LENGTH}-digit PIN with you on WhatsApp.
+          Your employer shared a PIN with you on WhatsApp. Enter your phone
+          number and that PIN to sign in.
         </p>
 
         {banner ? <p className="banner-note">{banner}</p> : null}
 
         <form action={staffSignInAction} className="auth-form">
           <label className="field">
-            <span>Code</span>
+            <span>Mobile number</span>
             <input
-              name="code"
-              type="text"
-              placeholder="ABCDEF"
-              autoComplete="off"
-              maxLength={STAFF_CODE_LENGTH}
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              placeholder="9XXXXXXXXX"
+              autoComplete="tel"
               required
               disabled={!isConfigured}
-              className="code-input"
             />
           </label>
 
@@ -53,8 +56,8 @@ export default async function StaffSignInPage({ searchParams }) {
               type="password"
               inputMode="numeric"
               pattern="[0-9]*"
-              placeholder="••••••"
-              maxLength={STAFF_PIN_LENGTH}
+              placeholder="••••"
+              maxLength={6}
               autoComplete="current-password"
               required
               disabled={!isConfigured}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   addStaffAction,
   resetStaffPinAction,
   deactivateAssignmentAction,
   saveAttendanceAction,
+  changeOwnerPasswordAction,
 } from "@/app/dashboard/actions";
 
 const STATUS_META = {
@@ -31,6 +32,7 @@ export default function OwnerWorkspace({
   leaves,
   ownerName,
   freshCredentials,
+  passwordBanner,
 }) {
   const activeAssignments = assignments.filter((a) => a.is_active && a.staff);
   const [selectedId, setSelectedId] = useState(activeAssignments[0]?.id || null);
@@ -98,6 +100,13 @@ export default function OwnerWorkspace({
         </div>
       </section>
 
+      {/* ── Password banner ── */}
+      {passwordBanner && (
+        <p className={`banner-note${passwordBanner.tone === "ok" ? " success" : ""}`}>
+          {passwordBanner.text}
+        </p>
+      )}
+
       {/* ── Credentials card after adding staff ── */}
       {freshCredentials && <FreshCredentialsCard credentials={freshCredentials} />}
 
@@ -131,6 +140,9 @@ export default function OwnerWorkspace({
           <p>No staff yet. Click <strong>Add staff</strong> above to get started.</p>
         </div>
       )}
+
+      {/* ── Change Password (owner settings) ── */}
+      <ChangePasswordSection />
 
       {/* ── Main view ── */}
       {selected && (
@@ -325,7 +337,28 @@ export default function OwnerWorkspace({
 
 function FreshCredentialsCard({ credentials }) {
   const heading = credentials.staffMode === "reset" ? "New PIN issued" : "Staff added";
-  const message = `Hi ${credentials.staffName || ""}, your attendance login:\nCode: ${credentials.staffCode}\nPIN: ${credentials.staffPin}\nOpen: ${typeof window !== "undefined" ? window.location.origin : ""}/sign-in/staff`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const loginUrl = `${origin}/sign-in/staff`;
+
+  // Build WhatsApp message — prefer phone-based instructions if phone is available
+  let message;
+  if (credentials.staffPhone) {
+    message =
+      `Hi ${credentials.staffName || ""}! 🏠\n` +
+      `Your attendance app login:\n` +
+      `📱 Phone: ${credentials.staffPhone}\n` +
+      `🔑 PIN: ${credentials.staffPin}\n` +
+      `🔗 Link: ${loginUrl}\n\n` +
+      `Enter your phone number and PIN to sign in. Save this message!`;
+  } else {
+    message =
+      `Hi ${credentials.staffName || ""}! 🏠\n` +
+      `Your attendance app login:\n` +
+      `🔑 Code: ${credentials.staffCode}\n` +
+      `🔑 PIN: ${credentials.staffPin}\n` +
+      `🔗 Link: ${loginUrl}\n\n` +
+      `(Ask your employer to add your phone number so you can log in with it next time.)`;
+  }
 
   return (
     <section className="card ow-creds-card">
@@ -334,10 +367,17 @@ function FreshCredentialsCard({ credentials }) {
         <h2>{heading}</h2>
       </div>
       <div className="credentials-grid">
-        <div className="credential-chip">
-          <span>Code</span>
-          <strong>{credentials.staffCode}</strong>
-        </div>
+        {credentials.staffPhone ? (
+          <div className="credential-chip">
+            <span>Phone</span>
+            <strong>{credentials.staffPhone}</strong>
+          </div>
+        ) : (
+          <div className="credential-chip">
+            <span>Code</span>
+            <strong>{credentials.staffCode}</strong>
+          </div>
+        )}
         <div className="credential-chip">
           <span>PIN</span>
           <strong>{credentials.staffPin}</strong>
@@ -350,7 +390,7 @@ function FreshCredentialsCard({ credentials }) {
       >
         Copy WhatsApp message
       </button>
-      <p className="banner-note subtle">We don&apos;t store the PIN. Use "Reset PIN" if they lose it.</p>
+      <p className="banner-note subtle">PIN is shown once. Use &ldquo;Reset PIN&rdquo; if they lose it.</p>
     </section>
   );
 }
@@ -425,6 +465,59 @@ function AddStaffForm({ onClose }) {
         </button>
       </form>
     </section>
+  );
+}
+
+// ── Change Password ───────────────────────────────────────────────────────────
+
+function ChangePasswordSection() {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(formData) {
+    if (submitted) return;
+    setSubmitted(true);
+    startTransition(() => changeOwnerPasswordAction(formData));
+  }
+
+  const busy = isPending || submitted;
+
+  return (
+    <details className="card ow-settings-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="ow-settings-summary">Account &amp; Password</summary>
+      {open && (
+        <form action={handleSubmit} className="setup-form" style={{ marginTop: "1rem" }}>
+          <label className="field">
+            <span>New password</span>
+            <input
+              name="newPassword"
+              type="password"
+              placeholder="At least 8 characters"
+              minLength={8}
+              required
+              disabled={busy}
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="field">
+            <span>Confirm new password</span>
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="Repeat password"
+              minLength={8}
+              required
+              disabled={busy}
+              autoComplete="new-password"
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={busy}>
+            {busy ? "Updating…" : "Update password"}
+          </button>
+        </form>
+      )}
+    </details>
   );
 }
 

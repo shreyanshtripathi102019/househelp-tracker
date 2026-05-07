@@ -134,6 +134,7 @@ export async function addStaffAction(formData) {
       staffCode,
       staffPin: plaintextPin,
       staffName: fullName,
+      staffPhone: phone || "",
       staffMode: "new",
     });
     redirect(`/dashboard?${sp.toString()}`);
@@ -169,11 +170,19 @@ export async function resetStaffPinAction(formData) {
 
   if (error) redirectWithError("pin", error);
 
+  // Fetch phone for this staff profile
+  const { data: profileWithPhone } = await admin
+    .from("staff_profiles")
+    .select("phone")
+    .eq("id", assignment.staff_profiles.id)
+    .maybeSingle();
+
   revalidatePath("/dashboard");
   const sp = new URLSearchParams({
     staffCode: assignment.staff_profiles.staff_code,
     staffPin: newPin,
     staffName: assignment.staff_profiles.full_name,
+    staffPhone: profileWithPhone?.phone || "",
     staffMode: "reset",
   });
   redirect(`/dashboard?${sp.toString()}`);
@@ -301,6 +310,34 @@ function enumerateDates(startDate, endDate) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Change owner password
+// ---------------------------------------------------------------------------
+export async function changeOwnerPasswordAction(formData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in/owner");
+
+  const newPassword = String(formData.get("newPassword") || "").trim();
+  const confirmPassword = String(formData.get("confirmPassword") || "").trim();
+
+  if (!newPassword || newPassword.length < 8) {
+    redirect("/dashboard?error=pw_weak&detail=Password+must+be+at+least+8+characters");
+  }
+  if (newPassword !== confirmPassword) {
+    redirect("/dashboard?error=pw_mismatch&detail=Passwords+do+not+match");
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    redirect(`/dashboard?error=pw_fail&detail=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/dashboard?pw=changed");
 }
 
 function redirectWithError(stage, error) {

@@ -135,8 +135,16 @@ export default async function DashboardPage({ searchParams }) {
           staffCode: String(params.staffCode),
           staffPin: String(params.staffPin),
           staffName: params.staffName ? String(params.staffName) : "",
+          staffPhone: params.staffPhone ? String(params.staffPhone) : "",
           staffMode: params.staffMode === "reset" ? "reset" : "new",
         }
+      : null;
+
+  const passwordBanner =
+    params.pw === "changed"
+      ? { tone: "ok", text: "Password updated successfully." }
+      : params.error === "pw_weak" || params.error === "pw_mismatch" || params.error === "pw_fail"
+      ? { tone: "err", text: decodeURIComponent(String(params.detail || "Could not update password.")) }
       : null;
 
   return (
@@ -150,6 +158,7 @@ export default async function DashboardPage({ searchParams }) {
           leaves={leaveRows}
           ownerName={user.user_metadata?.full_name || user.email?.split("@")[0] || "Owner"}
           freshCredentials={fresh}
+          passwordBanner={passwordBanner}
         />
       </main>
     </>

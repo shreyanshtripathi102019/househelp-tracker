@@ -1392,6 +1392,22 @@ select:focus-visible {
   gap: 12px;
 }
 
+/* Account & settings card */
+.ow-settings-card {
+  padding: 16px 20px;
+  font-size: 0.9rem;
+}
+
+.ow-settings-summary {
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+  color: var(--ink-soft);
+  padding: 2px 0;
+}
+
+.ow-settings-summary::-webkit-details-marker { display: none; }
+
 @media (max-width: 600px) {
   .ow-hero {
     flex-direction: column;

@@ -74,7 +74,9 @@ export default function StaffWorkspace({
           <div>
             <p className="eyebrow">Hello, {firstWord(profile.full_name)}</p>
             <h1 className="staff-hero-name">{profile.full_name}</h1>
-            <p className="muted">Code: {profile.staff_code}</p>
+            {profile.phone && (
+              <p className="muted">📱 {profile.phone}</p>
+            )}
           </div>
           <form action="/auth/signout" method="post">
             <button className="text-link" type="submit">

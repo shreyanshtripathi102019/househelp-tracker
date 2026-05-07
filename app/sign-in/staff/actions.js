@@ -2,11 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseEnv } from "@/lib/env";
 import {
-  isValidStaffCode,
+  isValidPhone,
+  normalisePhone,
   isValidStaffPin,
-  normaliseStaffCode,
   staffEmailFromCode,
 } from "@/lib/staff-auth";
 
@@ -15,25 +16,41 @@ export async function staffSignInAction(formData) {
     redirect("/sign-in/staff?error=config");
   }
 
-  const codeRaw = String(formData.get("code") || "").trim();
+  const phoneRaw = String(formData.get("phone") || "").trim();
   const pin = String(formData.get("pin") || "").trim();
 
-  if (!codeRaw || !pin) {
+  if (!phoneRaw || !pin) {
     redirect("/sign-in/staff?error=missing");
   }
 
-  const code = normaliseStaffCode(codeRaw);
-  if (!isValidStaffCode(code) || !isValidStaffPin(pin)) {
-    redirect("/sign-in/staff?error=invalid");
+  const phone = normalisePhone(phoneRaw);
+  if (!isValidPhone(phone)) {
+    redirect("/sign-in/staff?error=invalid_phone");
   }
 
-  const supabase = await createClient();
-  const email = staffEmailFromCode(code);
+  if (!isValidStaffPin(pin)) {
+    redirect("/sign-in/staff?error=invalid_pin");
+  }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password: pin,
-  });
+  // Look up staff profile by phone number
+  const admin = createAdminClient();
+  const { data: profiles, error: lookupError } = await admin
+    .from("staff_profiles")
+    .select("id, staff_code, full_name")
+    .eq("phone", phone)
+    .limit(2);
+
+  if (lookupError || !profiles || profiles.length === 0) {
+    redirect("/sign-in/staff?error=not_found");
+  }
+
+  // If multiple profiles share the same phone, sign in the first one
+  // (edge case — phone should be unique per person)
+  const profile = profiles[0];
+  const email = staffEmailFromCode(profile.staff_code);
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pin });
 
   if (error) {
     redirect("/sign-in/staff?error=invalid");
